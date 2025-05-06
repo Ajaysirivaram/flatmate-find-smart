@@ -11,6 +11,7 @@ import Login from "./pages/Login";
 import PostListing from "./pages/PostListing";
 import ListingDetail from "./pages/ListingDetail";
 import NotFound from "./pages/NotFound";
+import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
@@ -22,11 +23,11 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Index />} />
+            <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
             <Route path="/welcome" element={<Welcome />} />
             <Route path="/login" element={<Login />} />
-            <Route path="/post" element={<PostListing />} />
-            <Route path="/listings/:id" element={<ListingDetail />} />
+            <Route path="/post" element={<ProtectedRoute><PostListing /></ProtectedRoute>} />
+            <Route path="/listings/:id" element={<ProtectedRoute><ListingDetail /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
