@@ -71,19 +71,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const fetchProfile = async (userId: string) => {
     try {
-      const { data, error } = await supabase
+      // Check if profile exists first
+      let { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
-        .maybeSingle(); // Use maybeSingle instead of single to avoid errors if profile doesn't exist yet
+        .maybeSingle();
 
       if (error) {
         console.error('Error fetching profile:', error);
+        toast.error('Failed to fetch user profile');
       } else if (data) {
         setProfile(data);
+      } else {
+        // Profile doesn't exist yet, create one
+        const { error: insertError } = await supabase
+          .from('profiles')
+          .insert([{ id: userId }]);
+
+        if (insertError) {
+          console.error('Error creating profile:', insertError);
+          toast.error('Failed to create user profile');
+        } else {
+          // Fetch the newly created profile
+          const { data: newProfile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', userId)
+            .single();
+            
+          setProfile(newProfile);
+        }
       }
     } catch (error) {
       console.error('Profile fetch error:', error);
+      toast.error('Something went wrong while loading your profile');
     }
   };
 
@@ -91,6 +113,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       await supabase.auth.signOut();
       setProfile(null);
+      toast.success('Signed out successfully');
     } catch (error) {
       console.error('Sign out error:', error);
       toast.error('Failed to sign out');

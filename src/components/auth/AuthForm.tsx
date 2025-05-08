@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { ArrowLeft, Loader2, Eye, EyeOff } from 'lucide-react';
 
 interface AuthFormProps {
   onSuccess: () => void;
@@ -33,20 +33,20 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onSuccess, onBack }) => {
     setLoading(true);
     
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
       
       if (error) {
-        toast.error(error.message);
-      } else {
+        toast.error(error.message || 'Failed to login');
+      } else if (data.user) {
         toast.success('Login successful!');
         onSuccess();
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Login error:', error);
-      toast.error('Failed to login');
+      toast.error(error?.message || 'Failed to login');
     } finally {
       setLoading(false);
     }
@@ -68,23 +68,25 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onSuccess, onBack }) => {
     setLoading(true);
     
     try {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        options: {
-          emailRedirectTo: window.location.origin
-        }
       });
       
       if (error) {
         console.error('Signup error details:', error);
-        toast.error(error.message);
-      } else {
-        toast.success('Check your email for the confirmation link!');
+        toast.error(error.message || 'Failed to sign up');
+      } else if (data.user) {
+        if (data.session) {
+          toast.success('Account created successfully!');
+          onSuccess();
+        } else {
+          toast.success('Check your email for the confirmation link!');
+        }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Signup error:', error);
-      toast.error('Failed to sign up');
+      toast.error(error?.message || 'Failed to sign up');
     } finally {
       setLoading(false);
     }
@@ -106,14 +108,14 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onSuccess, onBack }) => {
         });
         
         if (error) {
-          toast.error(error.message);
+          toast.error(error.message || 'Failed to send OTP');
         } else {
           setShowOtp(true);
           toast.success('OTP sent to your phone');
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Phone OTP error:', error);
-        toast.error('Failed to send OTP');
+        toast.error(error?.message || 'Failed to send OTP');
       } finally {
         setLoading(false);
       }
@@ -132,14 +134,14 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onSuccess, onBack }) => {
         });
         
         if (error) {
-          toast.error(error.message);
+          toast.error(error.message || 'Invalid OTP');
         } else {
           toast.success('Login successful!');
           onSuccess();
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('OTP verification error:', error);
-        toast.error('Failed to verify OTP');
+        toast.error(error?.message || 'Failed to verify OTP');
       } finally {
         setLoading(false);
       }
@@ -158,11 +160,11 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onSuccess, onBack }) => {
       
       if (error) {
         console.error('Google login error details:', error);
-        toast.error(error.message);
+        toast.error(error.message || 'Failed to login with Google');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Google login error:', error);
-      toast.error('Failed to login with Google');
+      toast.error(error?.message || 'Failed to login with Google');
     } finally {
       setLoading(false);
     }
@@ -213,10 +215,10 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onSuccess, onBack }) => {
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="absolute right-2 top-1/2 -translate-y-1/2"
+                className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 p-0"
                 onClick={() => setShowPassword(!showPassword)}
               >
-                {showPassword ? 'Hide' : 'Show'}
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </Button>
             </div>
             <p className="text-xs text-gray-500 mt-1">Password must be at least 8 characters</p>
@@ -262,7 +264,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onSuccess, onBack }) => {
             <Input 
               id="phone" 
               type="tel" 
-              placeholder="Enter your phone number"
+              placeholder="Enter your phone number with country code (e.g. +1234567890)"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               disabled={showOtp || loading}

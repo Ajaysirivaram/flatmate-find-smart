@@ -21,7 +21,7 @@ const Welcome = () => {
   const navigate = useNavigate();
   const { user, profile, updateProfile } = useAuth();
 
-  // Check if user is already authenticated and redirect if they have a complete profile
+  // Check if user is already authenticated and redirect if profile is complete
   useEffect(() => {
     if (user && profile?.user_type) {
       navigate('/');
@@ -49,7 +49,12 @@ const Welcome = () => {
         navigate('/');
       } else if (user) {
         // If user is logged in but no type was selected (e.g. Google login redirect)
-        navigate('/');
+        if (!profile?.user_type) {
+          toast.info('Please select your user type');
+          setCurrentStep(WelcomeStep.SELECT_TYPE);
+        } else {
+          navigate('/');
+        }
       } else {
         // Wait a moment for auth state to update
         setTimeout(() => {
@@ -67,6 +72,51 @@ const Welcome = () => {
   };
 
   const renderStep = () => {
+    // If user is already logged in but doesn't have a user_type set, force them to select one
+    if (user && !profile?.user_type && currentStep !== WelcomeStep.SELECT_TYPE) {
+      return (
+        <>
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent mb-2">
+              Almost there!
+            </h1>
+            <p className="text-gray-600">
+              Please select your account type to continue
+            </p>
+          </div>
+
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <h2 className="text-lg font-medium mb-4">I am a...</h2>
+            <UserTypeSelector
+              selectedType={selectedType}
+              onSelect={setSelectedType}
+            />
+          </div>
+          
+          <Button 
+            className="w-full mt-6"
+            disabled={!selectedType}
+            onClick={async () => {
+              if (user && selectedType) {
+                try {
+                  await updateProfile({ 
+                    user_type: selectedType as 'individual' | 'business'
+                  });
+                  toast.success('Profile updated successfully!');
+                  navigate('/');
+                } catch (error) {
+                  console.error('Error updating profile:', error);
+                  toast.error('Failed to update profile');
+                }
+              }
+            }}
+          >
+            Continue <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
+        </>
+      );
+    }
+
     switch (currentStep) {
       case WelcomeStep.SELECT_TYPE:
         return (
