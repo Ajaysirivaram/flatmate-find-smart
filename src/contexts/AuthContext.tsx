@@ -3,6 +3,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
+import { toast } from 'sonner';
 
 type Profile = Tables<'profiles'>;
 
@@ -22,20 +23,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
     // Set up auth state listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.id);
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user) {
+          // Use setTimeout to avoid deadlocks in the auth state change handler
           setTimeout(() => {
             fetchProfile(session.user.id);
           }, 0);
+          
+          // Show welcome toast on sign in
+          if (event === 'SIGNED_IN' && isInitialized) {
+            toast.success('Welcome back!');
+          }
         } else {
           setProfile(null);
+          
+          // Show sign out toast
+          if (event === 'SIGNED_OUT' && isInitialized) {
+            toast.info('You have been signed out');
+          }
         }
       }
     );
@@ -49,6 +63,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         fetchProfile(session.user.id);
       }
       setIsLoading(false);
+      setIsInitialized(true);
     });
 
     return () => subscription.unsubscribe();
@@ -78,6 +93,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setProfile(null);
     } catch (error) {
       console.error('Sign out error:', error);
+      toast.error('Failed to sign out');
     }
   };
 
@@ -96,8 +112,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // Update the local profile state with the updates
       setProfile(prev => prev ? { ...prev, ...updates } : null);
+      toast.success('Profile updated successfully');
     } catch (error) {
       console.error('Error updating profile:', error);
+      toast.error('Failed to update profile');
       throw error;
     }
   };

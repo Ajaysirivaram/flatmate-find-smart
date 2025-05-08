@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Loader2 } from 'lucide-react';
 
 interface AuthFormProps {
   onSuccess: () => void;
@@ -20,9 +20,16 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onSuccess, onBack }) => {
   const [otp, setOtp] = useState('');
   const [showOtp, setShowOtp] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!email || !password) {
+      toast.error('Please enter both email and password');
+      return;
+    }
+    
     setLoading(true);
     
     try {
@@ -47,12 +54,26 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onSuccess, onBack }) => {
 
   const handleEmailSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!email || !password) {
+      toast.error('Please enter both email and password');
+      return;
+    }
+    
+    if (password.length < 8) {
+      toast.error('Password must be at least 8 characters');
+      return;
+    }
+    
     setLoading(true);
     
     try {
       const { error } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          emailRedirectTo: window.location.origin
+        }
       });
       
       if (error) {
@@ -70,6 +91,11 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onSuccess, onBack }) => {
 
   const handlePhoneLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!phone) {
+      toast.error('Please enter your phone number');
+      return;
+    }
     
     if (!showOtp) {
       setLoading(true);
@@ -91,6 +117,11 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onSuccess, onBack }) => {
         setLoading(false);
       }
     } else {
+      if (!otp) {
+        toast.error('Please enter the OTP');
+        return;
+      }
+      
       setLoading(true);
       try {
         const { error } = await supabase.auth.verifyOtp({
@@ -115,9 +146,13 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onSuccess, onBack }) => {
   };
 
   const handleGoogleLogin = async () => {
+    setLoading(true);
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/welcome`
+        }
       });
       
       if (error) {
@@ -126,12 +161,14 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onSuccess, onBack }) => {
     } catch (error) {
       console.error('Google login error:', error);
       toast.error('Failed to login with Google');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className="w-full">
-      <Button variant="ghost" size="sm" onClick={onBack} className="mb-4">
+      <Button variant="ghost" size="sm" onClick={onBack} className="mb-4" disabled={loading}>
         <ArrowLeft className="h-4 w-4 mr-2" /> Back
       </Button>
       
@@ -161,20 +198,34 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onSuccess, onBack }) => {
           
           <div className="space-y-2">
             <Label htmlFor="password">Password</Label>
-            <Input 
-              id="password" 
-              type="password" 
-              placeholder="Enter your password" 
-              value={password} 
-              onChange={(e) => setPassword(e.target.value)}
-              disabled={loading} 
-            />
+            <div className="relative">
+              <Input 
+                id="password" 
+                type={showPassword ? "text" : "password"} 
+                placeholder="Enter your password" 
+                value={password} 
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={loading} 
+              />
+              <Button 
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="absolute right-2 top-1/2 -translate-y-1/2"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? 'Hide' : 'Show'}
+              </Button>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">Password must be at least 8 characters</p>
           </div>
           
           <div className="flex justify-end">
             <Button 
               variant="link" 
               className="text-sm px-0"
+              disabled={loading}
+              onClick={() => toast.info('Password reset functionality coming soon')}
             >
               Forgot password?
             </Button>
@@ -187,6 +238,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onSuccess, onBack }) => {
               className="w-full"
               disabled={loading}
             >
+              {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Login
             </Button>
             <Button
@@ -196,6 +248,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onSuccess, onBack }) => {
               className="w-full"
               disabled={loading}
             >
+              {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Sign Up
             </Button>
           </div>
@@ -247,6 +300,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onSuccess, onBack }) => {
             onClick={handlePhoneLogin}
             disabled={loading}
           >
+            {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
             {showOtp ? 'Verify OTP' : 'Send OTP'}
           </Button>
         </TabsContent>
@@ -268,6 +322,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onSuccess, onBack }) => {
         onClick={handleGoogleLogin}
         disabled={loading}
       >
+        {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
         <img 
           src="https://authjs.dev/img/providers/google.svg" 
           alt="Google" 
