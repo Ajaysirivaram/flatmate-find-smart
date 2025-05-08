@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { UserTypeSelector } from '@/components/auth/UserTypeSelector';
@@ -7,7 +7,6 @@ import { OnboardingCarousel } from '@/components/onboarding/OnboardingCarousel';
 import { AuthForm } from '@/components/auth/AuthForm';
 import { ArrowRight } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 enum WelcomeStep {
@@ -21,6 +20,13 @@ const Welcome = () => {
   const [currentStep, setCurrentStep] = useState<WelcomeStep>(WelcomeStep.SELECT_TYPE);
   const navigate = useNavigate();
   const { user, profile, updateProfile } = useAuth();
+
+  // Check if user is already authenticated and redirect if they have a complete profile
+  useEffect(() => {
+    if (user && profile?.user_type) {
+      navigate('/');
+    }
+  }, [user, profile, navigate]);
 
   const handleContinue = () => {
     if (selectedType) {
@@ -41,6 +47,14 @@ const Welcome = () => {
         });
         toast.success('Profile updated successfully!');
         navigate('/');
+      } else if (user) {
+        // If user is logged in but no type was selected (e.g. Google login redirect)
+        navigate('/');
+      } else {
+        // Wait a moment for auth state to update
+        setTimeout(() => {
+          if (user) navigate('/');
+        }, 1000);
       }
     } catch (error) {
       console.error('Error updating profile:', error);
@@ -51,13 +65,6 @@ const Welcome = () => {
   const handleBackToTypeSelection = () => {
     setCurrentStep(WelcomeStep.SELECT_TYPE);
   };
-
-  // If user is already authenticated and has a profile with user_type set, redirect to home
-  React.useEffect(() => {
-    if (user && profile?.user_type) {
-      navigate('/');
-    }
-  }, [user, profile, navigate]);
 
   const renderStep = () => {
     switch (currentStep) {

@@ -77,6 +77,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onSuccess, onBack }) => {
       });
       
       if (error) {
+        console.error('Signup error details:', error);
         toast.error(error.message);
       } else {
         toast.success('Check your email for the confirmation link!');
@@ -156,6 +157,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onSuccess, onBack }) => {
       });
       
       if (error) {
+        console.error('Google login error details:', error);
         toast.error(error.message);
       }
     } catch (error) {
